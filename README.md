@@ -46,17 +46,17 @@ dev-url = "portless-worktree-dev url"
 dev-status = "portless-worktree-dev status"
 ```
 
-## Mesh Integration
+## Tailport Integration
 
-Mesh or remote-preview tooling should consume machine-readable status instead of parsing human output:
+Tailport or remote-preview tooling should consume machine-readable status instead of parsing human output:
 
 ```sh
 portless-worktree-dev status --json
 ```
 
-The JSON includes app name, branch, repo root, state directory, Portless URL, PID state, readiness, and dev command. A separate mesh helper can use that as input before exposing an already-running local preview over Tailscale Serve, SSH forwarding, or VM-specific transport.
+The JSON includes app name, branch, repo root, state directory, Portless URL, PID state, readiness, and dev command. A separate `tailport` helper can use that as input before exposing an already-running local preview over Tailscale Serve, SSH forwarding, or VM-specific transport.
 
-This mirrors the `meshnet` idea: keep each preview feeling local, but separate local preview routing from remote/VM transport.
+Use `chat-meshnet` for the Rhys-style coding-chat harness concept where each chat/session owns a VM or sandbox but feels like local `localhost:3000` development. Reserve bare `meshnet` for broader or future mesh concepts.
 
 ## Strict Default Proxy
 
