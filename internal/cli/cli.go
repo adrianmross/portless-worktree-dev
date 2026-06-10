@@ -54,6 +54,8 @@ type statusReport struct {
 	RepoRoot            string   `json:"repoRoot"`
 	StateDir            string   `json:"stateDir"`
 	URL                 string   `json:"url,omitempty"`
+	TargetURL           string   `json:"targetUrl,omitempty"`
+	TargetPort          int      `json:"targetPort,omitempty"`
 	PID                 int      `json:"pid,omitempty"`
 	Running             bool     `json:"running"`
 	Ready               bool     `json:"ready"`
@@ -64,6 +66,12 @@ type statusReport struct {
 
 type packageJSON struct {
 	Name string `json:"name"`
+}
+
+type portlessRoute struct {
+	Hostname string `json:"hostname"`
+	Port     int    `json:"port"`
+	PID      int    `json:"pid"`
 }
 
 func Run(args []string) error {
@@ -647,10 +655,51 @@ func collectStatus(cfg config, root string) (statusReport, error) {
 	if resolved, err := printURL(cfg); err == nil {
 		report.URL = resolved
 		report.Ready = urlReady(resolved)
+		if targetURL, targetPort := resolvePortlessTarget(resolved); targetURL != "" {
+			report.TargetURL = targetURL
+			report.TargetPort = targetPort
+		}
 	} else if cfg.requireDefaultURL {
 		return report, err
 	}
 	return report, nil
+}
+
+func resolvePortlessTarget(resolved string) (string, int) {
+	parsed, err := url.Parse(resolved)
+	if err != nil || parsed.Hostname() == "" {
+		return "", 0
+	}
+	routes, err := readPortlessRoutes()
+	if err != nil {
+		return "", 0
+	}
+	for _, route := range routes {
+		if route.Hostname == parsed.Hostname() && route.Port > 0 {
+			return fmt.Sprintf("http://127.0.0.1:%d", route.Port), route.Port
+		}
+	}
+	return "", 0
+}
+
+func readPortlessRoutes() ([]portlessRoute, error) {
+	stateDir := os.Getenv("PORTLESS_STATE_DIR")
+	if stateDir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, err
+		}
+		stateDir = filepath.Join(home, ".portless")
+	}
+	data, err := os.ReadFile(filepath.Join(stateDir, "routes.json"))
+	if err != nil {
+		return nil, err
+	}
+	var routes []portlessRoute
+	if err := json.Unmarshal(data, &routes); err != nil {
+		return nil, err
+	}
+	return routes, nil
 }
 
 func tailLogs(cfg config, root string) error {
